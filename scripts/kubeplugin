@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Define command-line arguments
+RESOURCE_TYPE=$1
+NAMESPACE=$2
+
+__plugin_help() {
+  echo
+  echo 'kubeplugin usage:'
+  echo
+  echo 'kubectl kubeplugin [<namespace>] [<resource_type>]'
+  echo
+  echo '  where <resource_type> is one of available values:'
+  echo '    node, nodes, no          Display resource (CPU/memory) usage of nodes'
+  echo '    pod, pods, po            Display resource (CPU/memory) usage of pods'
+  echo
+}
+
+__plugin_start() {
+
+  if [[ $RESOURCE_TYPE == "" ]]; then RESOURCE_TYPE="pods"; fi
+  if [[ $NAMESPACE == "" ]]; then NAMESPACE="default"; fi
+  if [[ $RESOURCE_TYPE != "pod" && $RESOURCE_TYPE != "pods" && $RESOURCE_TYPE != "po" && $RESOURCE_TYPE != "nodes" && $RESOURCE_TYPE != "node" && $RESOURCE_TYPE != "no" ]]
+  then
+    __plugin_help
+    exit 0
+  fi
+
+# Retrieve resource usage statistics from Kubernetes
+kubectl top $RESOURCE_TYPE -n $NAMESPACE | tail -n +2 | while read line
+do
+  # Extract CPU and memory usage from the output
+  NAME=$(echo $line | awk '{print $1}')
+  CPU=$(echo $line | awk '{print $2}')
+  MEMORY=$(echo $line | awk '{print $3}')
+
+  echo $RESOURCE_TYPE, $NAMESPACE, $NAME, $CPU, $MEMORY
+  # echo "Resource: $RESOURCE_TYPE, Namespace: $NAMESPACE, Name: $NAME, CPU: $CPU, Memory: $MEMORY"
+  # echo -e "$RESOURCE_TYPE, $NAMESPACE, $NAME, $CPU, $MEMORY"
+
+  # Output the statistics to the console
+  # "Resource, Namespace, Name, CPU, Memory"
+done
+}
+
+# kubectl top pods -n argocd
+# kubectl get pods --all-namespaces
+# kubectl top pods -n argocd --containers
+# kubectl top pods --all-namespaces --containers
+
+if [[ "$1" == "--help" || "$1" == "--h" ]]
+then
+  __plugin_help
+  exit 0
+fi
+
+__plugin_start
